@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  password       String
+  role           Role
+  isVerified     Boolean  @default(false)
+  profilePicture String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  properties Property[]
+  orders     Order[]
+  reviews    Review[]
+}
+
+enum Role {
+  USER
+  TENANT
+}
+
+model PropertyCategory {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  properties Property[]
+}
+
+model Property {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String
+  address     String
+  city        String
+  province    String
+  picture     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant     User             @relation(fields: [tenantId], references: [id])
+  categoryId String
+  category   PropertyCategory @relation(fields: [categoryId], references: [id])
+  rooms      Room[]
+  reviews    Review[]
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  propertyId  String
+  name        String
+  description String?
+  basePrice   Float
+  capacity    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  property     Property           @relation(fields: [propertyId], references: [id])
+  availability RoomAvailability[]
+  peakRates    PeakSeasonRate[]
+  orders       Order[]
+}
+
+model RoomAvailability {
+  id          String   @id @default(uuid())
+  roomId      String
+  date        DateTime
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  room Room @relation(fields: [roomId], references: [id])
+}
+
+model PeakSeasonRate {
+  id              String         @id @default(uuid())
+  roomId          String
+  date            DateTime
+  adjustmentType  AdjustmentType
+  adjustmentValue Float
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  room Room @relation(fields: [roomId], references: [id])
+}
+
+enum AdjustmentType {
+  PERCENTAGE
+  NOMINAL
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  userId     String
+  roomId     String
+  startDate  DateTime
+  endDate    DateTime
+  totalPrice Float
+  status     OrderStatus
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+  room    Room     @relation(fields: [roomId], references: [id])
+  payment Payment?
+}
+
+enum OrderStatus {
+  MENUNGGU_PEMBAYARAN
+  MENUNGGU_KONFIRMASI
+  DIKONFIRMASI
+  DIBATALKAN
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  paymentMethod PaymentMethod
+  proofUrl      String?
+  status        PaymentStatus
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+enum PaymentMethod {
+  TRANSFER
+  GATEWAY
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  comment    String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+}
