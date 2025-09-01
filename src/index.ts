@@ -1,12 +1,10 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { ZodError } from "zod";
 import { PORT } from "./config";
-
-// ROUTER
-///
-///
+import userRouter from "./routers/user.router";
+import authRouter from "./routers/auth.router";
+import propertyRouter from "./routers/property.router";
 
 const port = PORT || 8080;
 
@@ -17,16 +15,18 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 
+// Health check
 app.get("/api", (req: Request, res: Response) => {
   res.send("API is running");
 });
 
 // END POINT
-///
-///
+app.use("/api/users", userRouter);
+app.use("/api/auth", authRouter);
+
+app.use("/api/properties", propertyRouter);
 
 // ERROR MIDDLEWARE
-
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).send(err.message);
 });
