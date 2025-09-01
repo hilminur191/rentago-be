@@ -1,6 +1,6 @@
 import prisma from "../lib/prisma";
 import { compare, genSaltSync, hashSync } from "bcrypt";
-import { IRegisterParam } from "../interfaces/auth.type";
+import { IRegisterParam } from "../interfaces/auth.types";
 
 export async function findUserByEmail(email: string) {
   return prisma.user.findUnique({ where: { email } });

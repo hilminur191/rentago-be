@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { PORT } from "./config";
 import userRouter from "./routers/user.router";
 import authRouter from "./routers/auth.router";
+import propertyRouter from "./routers/property.router";
 
 const port = PORT || 8080;
 
@@ -22,6 +23,8 @@ app.get("/api", (req: Request, res: Response) => {
 // END POINT
 app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
+
+app.use("/api/properties", propertyRouter);
 
 // ERROR MIDDLEWARE
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

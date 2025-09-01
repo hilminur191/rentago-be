@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { IJwtPayload } from "../interfaces/auth.type";
+import { IJwtPayload } from "../interfaces/auth.types";
 
 const SECRET_KEY = process.env.SECRET_KEY || "Rentago2025";
 
@@ -31,11 +31,7 @@ export function verifyToken(req: Request, res: Response, next: NextFunction) {
 }
 
 // Middleware khusus role: Tenant
-export function tenantGuard(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export function tenantGuard(req: Request, res: Response, next: NextFunction) {
   try {
     if (req.user?.role !== "TENANT") {
       throw new Error("Forbidden: Tenant only");
@@ -57,5 +53,3 @@ export function userGuard(req: Request, res: Response, next: NextFunction) {
     next(error);
   }
 }
-
-

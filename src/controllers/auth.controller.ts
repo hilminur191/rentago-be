@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { findUserByEmail, registerUser } from "../repositories/auth.repository";
-import { ILoginParam, IRegisterParam } from "../interfaces/auth.type";
+import { ILoginParam, IRegisterParam } from "../interfaces/auth.types";
 
 export async function loginUser(req: Request, res: Response) {
   try {
