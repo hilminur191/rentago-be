@@ -1,17 +1,17 @@
 // Nurbani
 import { Router } from "express";
 import * as orderController from "../controllers/order.controller";
-import upload from "../middlewares/upload";
+import upload from "../middlewares/upload.middleware";
 
 const router = Router();
 
-router.get("/", order.controller.getOrders); // GET /orders
-router.post("/", order.controller.createOrder); // POST /orders
-router.post("/:id/cancel", order.controller.cancelOrder); // POST /orders/:id/cancel
+router.get("/", orderController.getOrders); // GET /orders
+router.post("/", orderController.createOrder); // POST /orders
+router.post("/:id/cancel", orderController.cancelOrder); // POST /orders/:id/cancel
 router.post(
   "/:id/payment-proof",
   upload.single("file"),
-  order.controller.uploadPaymentProof
+  orderController.uploadPaymentProof
 );
 
 export default router;
