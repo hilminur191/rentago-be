@@ -5,7 +5,10 @@ import * as orderService from "../services/order.service";
 export const getOrders = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id; // ambil dari JWT middleware
-    const orders = await order.service.getOrders(userId);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const orders = await orderService.getOrders(userId);
     res.json(orders);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -15,8 +18,11 @@ export const getOrders = async (req: Request, res: Response) => {
 export const createOrder = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const { roomId, startDate, endDate, paymentMethod } = req.body;
-    const order = await order.service.createOrder(userId, {
+    const order = await orderService.createOrder(userId, {
       roomId,
       startDate,
       endDate,
@@ -31,8 +37,14 @@ export const createOrder = async (req: Request, res: Response) => {
 export const cancelOrder = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const { id } = req.params;
-    const order = await order.service.cancelOrder(userId, id);
+    if (!id) {
+      return res.status(400).json({ error: "Order ID is required" });
+    }
+    const order = await orderService.cancelOrder(userId, id);
     res.json(order);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -42,11 +54,18 @@ export const cancelOrder = async (req: Request, res: Response) => {
 export const uploadPaymentProof = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: "Order ID is required" });
+    }
     const file = req.file;
     if (!file) throw new Error("File tidak ditemukan");
 
-    const order = await order.service.uploadPaymentProof(userId, id, file);
+    const order = await orderService.uploadPaymentProof(userId, id, file);
     res.json(order);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
