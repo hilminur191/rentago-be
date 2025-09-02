@@ -1,6 +1,6 @@
 // Nurbani
 import prisma from "../lib/prisma";
-import { cloudinaryUpload } from "../utils/cloudinary";
+import { uploadToCloudinary } from "../utils/cloudinary";
 
 export const getOrders = async (userId: string) => {
   return prisma.order.findMany({
@@ -79,7 +79,7 @@ export const uploadPaymentProof = async (
   if (order.userId !== userId)
     throw new Error("Tidak boleh upload untuk order orang lain");
 
-  const uploadResult = await cloudinaryUpload(file);
+  const uploadResult = await uploadToCloudinary(file);
 
   return prisma.payment.update({
     where: { orderId },
