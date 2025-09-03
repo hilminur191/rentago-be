@@ -4,6 +4,11 @@ import * as svc from "../services/order.service";
 import { uploadStream } from "../lib/cloudinary";
 import { sendEmail } from "../lib/email.service";
 
+// Type untuk params :id
+type IdParam = {
+  id: string;
+};
+
 // ---------------- USER CONTROLLER ----------------
 
 // Buat pesanan baru
@@ -31,7 +36,7 @@ export const createOrder = async (
 
 // Upload bukti pembayaran (Cloudinary)
 export const uploadPaymentProof = async (
-  req: Request,
+  req: Request<IdParam>,
   res: Response,
   next: NextFunction
 ) => {
@@ -77,7 +82,7 @@ export const getUserOrders = async (
 
 // Batalkan pesanan (oleh user)
 export const cancelOrder = async (
-  req: Request,
+  req: Request<IdParam>,
   res: Response,
   next: NextFunction
 ) => {
@@ -121,7 +126,7 @@ export const getTenantOrders = async (
 
 // Tenant konfirmasi pembayaran
 export const tenantConfirmPayment = async (
-  req: Request,
+  req: Request<IdParam>,
   res: Response,
   next: NextFunction
 ) => {
@@ -144,7 +149,7 @@ export const tenantConfirmPayment = async (
 
 // Tenant batalkan pesanan
 export const tenantCancelOrder = async (
-  req: Request,
+  req: Request<IdParam>,
   res: Response,
   next: NextFunction
 ) => {
