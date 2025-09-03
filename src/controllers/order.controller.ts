@@ -1,73 +1,160 @@
 // Nurbani
-import { Request, Response } from "express";
-import * as orderService from "../services/order.service";
+import { Request, Response, NextFunction } from "express";
+import * as svc from "../services/order.service";
+import { uploadStream } from "../lib/cloudinary";
+import { sendEmail } from "../lib/email.service";
 
-export const getOrders = async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.id; // ambil dari JWT middleware
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const orders = await orderService.getOrders(userId);
-    res.json(orders);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-};
+// ---------------- USER CONTROLLER ----------------
 
-export const createOrder = async (req: Request, res: Response) => {
+// Buat pesanan baru
+export const createOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { roomId, startDate, endDate, paymentMethod } = req.body;
-    const order = await orderService.createOrder(userId, {
+    const userId = req.user!.id; // dari auth.middleware
+    const { roomId, startDate, endDate } = req.body;
+
+    const order = await svc.createOrderService({
+      userId,
       roomId,
       startDate,
       endDate,
-      paymentMethod,
     });
-    res.json(order);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+
+    res.status(201).json(order);
+  } catch (err) {
+    next(err);
   }
 };
 
-export const cancelOrder = async (req: Request, res: Response) => {
+// Upload bukti pembayaran (Cloudinary)
+export const uploadPaymentProof = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ error: "Order ID is required" });
-    }
-    const order = await orderService.cancelOrder(userId, id);
-    res.json(order);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const orderId = req.params.id;
+    if (!req.file) throw new Error("No file uploaded");
+
+    const buffer = req.file.buffer;
+    const result = await svc.uploadPaymentProofService(
+      orderId,
+      buffer,
+      uploadStream
+    );
+
+    res.json({ success: true, url: result.secure_url });
+  } catch (err) {
+    next(err);
   }
 };
 
-export const uploadPaymentProof = async (req: Request, res: Response) => {
+// Lihat daftar pesanan user
+export const getUserOrders = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const userId = req.user!.id;
+    const page = Number(req.query.page || 1);
+    const perPage = Number(req.query.perPage || 10);
 
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ error: "Order ID is required" });
-    }
-    const file = req.file;
-    if (!file) throw new Error("File tidak ditemukan");
+    const filters = {
+      status: req.query.status,
+      orderNumber: req.query.orderNumber,
+    };
 
-    const order = await orderService.uploadPaymentProof(userId, id, file);
-    res.json(order);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    const data = await svc.getUserOrdersService(userId, page, perPage, filters);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Batalkan pesanan (oleh user)
+export const cancelOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.id;
+    const orderId = req.params.id;
+
+    await svc.cancelOrderService(orderId, userId, false);
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------------- TENANT CONTROLLER ----------------
+
+// Tenant lihat daftar order
+export const getTenantOrders = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const tenantId = req.user!.id;
+    const page = Number(req.query.page || 1);
+    const perPage = Number(req.query.perPage || 10);
+
+    const filters = { status: req.query.status };
+
+    const data = await svc.getTenantOrdersService(
+      tenantId,
+      page,
+      perPage,
+      filters
+    );
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Tenant konfirmasi pembayaran
+export const tenantConfirmPayment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const tenantId = req.user!.id;
+    const orderId = req.params.id;
+    const { accept } = req.body; // boolean
+
+    await svc.tenantConfirmPaymentService(
+      orderId,
+      tenantId,
+      Boolean(accept),
+      sendEmail
+    );
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Tenant batalkan pesanan
+export const tenantCancelOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const tenantId = req.user!.id;
+    const orderId = req.params.id;
+
+    await svc.cancelOrderService(orderId, tenantId, true);
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
   }
 };
