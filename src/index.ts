@@ -24,9 +24,8 @@ app.get("/api", (req: Request, res: Response) => {
 // END POINT
 app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
-
+app.use("/api/orders", orderRouter); // ditambah oleh Nurbani
 app.use("/api/properties", propertyRouter);
-app.use("/api/orders", orderRouter); // ditambahkan Nurbani
 
 // ERROR MIDDLEWARE
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
