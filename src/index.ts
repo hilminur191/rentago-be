@@ -6,6 +6,7 @@ import userRouter from "./routers/user.router";
 import authRouter from "./routers/auth.router";
 import propertyRouter from "./routers/property.router";
 import orderRouter from "./routers/order.router";
+import { startScheduler } from "./utils/scheduler";
 
 const port = PORT || 8080;
 
@@ -24,15 +25,17 @@ app.get("/api", (req: Request, res: Response) => {
 // END POINT
 app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
-app.use("/api/orders", orderRouter); // ditambah oleh Nurbani
 app.use("/api/properties", propertyRouter);
+app.use("/api/orders", orderRouter); // ditambah oleh Nurbani
 
 // ERROR MIDDLEWARE
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  res.status(500).send(err.message);
+  console.error(err);
+  res.status(500).json({ message: err.message || "Internal server error" });
 });
 
 // Start server
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);
+  startScheduler(); // jalankan auto-cancel scheduler
 });
