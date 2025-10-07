@@ -1,10 +1,16 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import { findUserByEmail, registerUser } from "../repositories/auth.repository";
-import { ILoginParam, IRegisterParam } from "../interfaces/auth.types";
+import {
+  loginUser,
+  registerUser,
+  createUserAfterVerify,
+  checkVerifyToken,
+  requestResetPassword,
+  confirmResetPassword,
+} from "../repositories/auth.repository";
+import { ILoginParam } from "../interfaces/auth.types";
 
-export async function loginUser(req: Request, res: Response) {
+// LOGIN
+export async function loginUserController(req: Request, res: Response) {
   try {
     const { email, password }: ILoginParam = req.body;
 
@@ -14,45 +20,11 @@ export async function loginUser(req: Request, res: Response) {
         .json({ message: "Email and password are required" });
     }
 
-    const user = await findUserByEmail(email);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    if (!user.isVerified) {
-      return res.status(403).json({ message: "Account not verified" });
-    }
-
-    // cek password (kalau social login, password bisa null)
-    if (user.password) {
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-    } else {
-      return res
-        .status(400)
-        .json({ message: "This account uses social login" });
-    }
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      process.env.SECRET_KEY!,
-      { expiresIn: "1d" }
-    );
+    const result = await loginUser({ email, password });
 
     return res.status(200).json({
       message: "Login successful",
-      token,
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-      },
+      ...result,
     });
   } catch (err: any) {
     return res
@@ -61,27 +33,85 @@ export async function loginUser(req: Request, res: Response) {
   }
 }
 
-export async function registerNewUser(req: Request, res: Response) {
+// REGISTER
+export async function registerEmailController(req: Request, res: Response) {
   try {
-    const userData: IRegisterParam = req.body;
-
-    const user = await registerUser({
-      ...userData,
-    });
-
-    return res.status(201).json({
-      message: "Registration successful. Please verify your email.",
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        isVerified: user.isVerified,
-      },
-    });
+    const { email, role, name } = req.body;
+    const result = await registerUser({ email, role, name });
+    return res.status(201).json(result);
   } catch (err: any) {
     return res
-      .status(400)
-      .json({ message: err.message || "Registration failed" });
+      .status(500)
+      .json({ message: err.message || "Internal server error" });
+  }
+}
+
+// VERIFY EMAIL TOKEN
+export async function verifyEmailTokenController(req: Request, res: Response) {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+    const result = await checkVerifyToken(token as string);
+    if (!result)
+      return res.status(400).json({ message: "Invalid or expired token" });
+    return res.status(200).json({ message: "Token valid" });
+  } catch (err: any) {
+    return res
+      .status(500)
+      .json({ message: err.message || "Internal server error" });
+  }
+}
+
+// SET PASSWORD (verify email)
+export async function setPasswordController(req: Request, res: Response) {
+  try {
+    const { token, password } = req.body;
+    const result = await createUserAfterVerify(token, password);
+    return res.status(201).json({ message: "User created", user: result });
+  } catch (err: any) {
+    return res
+      .status(500)
+      .json({ message: err.message || "Internal server error" });
+  }
+}
+
+// RESET PASSWORD (request link)
+export async function resetPasswordController(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const result = await requestResetPassword(email);
+    return res.status(200).json(result);
+  } catch (err: any) {
+    return res
+      .status(500)
+      .json({ message: err.message || "Internal server error" });
+  }
+}
+
+// CONFIRM RESET PASSWORD
+export async function confirmResetPasswordController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ message: "Token and new password are required" });
+    }
+
+    const result = await confirmResetPassword(token, password);
+    return res.status(200).json(result);
+  } catch (err: any) {
+    return res
+      .status(500)
+      .json({ message: err.message || "Internal server error" });
   }
 }

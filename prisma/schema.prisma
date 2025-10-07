@@ -15,6 +15,7 @@ model User {
   password       String
   role           Role
   isVerified     Boolean  @default(false)
+  is_external_login Boolean @default(false)
   profilePicture String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -23,11 +24,28 @@ model User {
   properties Property[]
   orders     Order[]
   reviews    Review[]
+  temporaryToken TemporaryToken[]
 }
 
 enum Role {
   USER
   TENANT
+}
+
+model TemporaryToken {
+  id        String              @id @default(uuid())
+  token     String              @unique
+  userId    String
+  expiredAt DateTime
+  type      TemporaryTokenType
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum TemporaryTokenType {
+  RESET_PASSWORD
+  VERIFY_EMAIL
+  FORGOT_PASSWORD
 }
 
 model PropertyCategory {
@@ -48,7 +66,7 @@ model Property {
   address     String
   city        String
   province    String
-  picture     String?
+  pictures    PropertyPicture[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -60,6 +78,14 @@ model Property {
   reviews    Review[]
 }
 
+model PropertyPicture{
+  id           String @id @default(uuid())
+  url          String @unique
+  property_id  String
+
+  property Property @relation(fields: [property_id], references: [id])
+}
+
 model Room {
   id          String   @id @default(uuid())
   propertyId  String
@@ -67,6 +93,7 @@ model Room {
   description String?
   basePrice   Float
   capacity    Int
+  quantity    Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -81,7 +108,7 @@ model RoomAvailability {
   id          String   @id @default(uuid())
   roomId      String
   date        DateTime
-  isAvailable Boolean  @default(true)
+  availability Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -92,13 +119,13 @@ model RoomAvailability {
 model PeakSeasonRate {
   id              String         @id @default(uuid())
   roomId          String
-  date            DateTime
+  startDate       DateTime
+  endDate         DateTime
   adjustmentType  AdjustmentType
   adjustmentValue Float
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  // Relations
   room Room @relation(fields: [roomId], references: [id])
 }
 

@@ -3,7 +3,6 @@ export interface ICreateUserParam {
   email: string;
   password: string;
   role: "USER" | "TENANT";
-  profilePicture?: string;
 }
 
 export interface IUpdateUserParam {
@@ -11,5 +10,5 @@ export interface IUpdateUserParam {
   email?: string;
   password?: string;
   role: "USER" | "TENANT";
-  profilePicture?: string;
+  profilePicture?: Express.Multer.File;
 }
