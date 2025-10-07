@@ -3,7 +3,7 @@ import {
   createUserController,
   getUserDetailController,
   getUserByIdController,
-  updateUserController,
+  // updateUserController,
   deleteUserController,
   getAllUsersController,
 } from "../controllers/user.controller";
@@ -23,8 +23,8 @@ router.get("/:id", verifyToken, getUserByIdController);
 // Create new user
 router.post("/", verifyToken, createUserController);
 
-// Update user
-router.put("/:id", verifyToken, updateUserController);
+// // Update user
+// router.put("/:id", verifyToken, updateUserController);
 
 // Delete user
 router.delete("/:id", verifyToken, deleteUserController);

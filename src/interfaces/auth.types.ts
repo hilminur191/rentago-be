@@ -1,14 +1,13 @@
 export interface ILoginParam {
-  role: "USER" | "TENANT";
   email: string;
   password: string;
+  role?: "USER" | "TENANT";
 }
 
 export interface IRegisterParam {
-  role: "USER" | "TENANT";
-  name: string;
   email: string;
-  password: string;
+  role: "USER" | "TENANT";
+  name?: string;
 }
 
 export interface IJwtPayload {

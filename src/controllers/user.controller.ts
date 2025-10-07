@@ -26,10 +26,17 @@ export async function getUserByIdController(
   }
 }
 
-// Create user
+// Create user after email verification
 export async function createUserController(req: Request, res: Response) {
   try {
-    const createdUser = await userRepo.createUser(req.body);
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ message: "Token and password are required" });
+    }
+
+    const createdUser = await userRepo.createUser(token, password);
     return res.status(201).json(createdUser);
   } catch (error: any) {
     return res.status(400).json({ message: error.message });
@@ -37,19 +44,19 @@ export async function createUserController(req: Request, res: Response) {
 }
 
 // Update user
-export async function updateUserController(
-  req: Request<{ id: string }>,
-  res: Response
-) {
-  try {
-    const updatedUser = await userRepo.updateUser(req.params.id, req.body);
-    return res.status(200).json(updatedUser);
-  } catch (error: any) {
-    return res.status(400).json({ message: error.message });
-  }
-}
+// export async function updateUserController(
+//   req: Request<{ id: string }>,
+//   res: Response
+// ) {
+//   try {
+//     const updatedUser = await userRepo.updateUser(req.params.id, req.body);
+//     return res.status(200).json(updatedUser);
+//   } catch (error: any) {
+//     return res.status(400).json({ message: error.message });
+//   }
+// }
 
-// ✅ Delete user
+// Delete user
 export async function deleteUserController(
   req: Request<{ id: string }>,
   res: Response
@@ -62,7 +69,7 @@ export async function deleteUserController(
   }
 }
 
-// ✅ User details (pakai JWT middleware)
+// User details (pakai JWT middleware)
 export async function getUserDetailController(req: Request, res: Response) {
   try {
     const userId = (req as any).user.id;
