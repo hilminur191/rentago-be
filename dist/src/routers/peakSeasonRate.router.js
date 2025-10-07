@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const peakSeasonRate_controller_1 = require("../controllers/peakSeasonRate.controller");
+const router = (0, express_1.Router)();
+router.post("/", peakSeasonRate_controller_1.createPeakSeasonRate);
+router.get("/", peakSeasonRate_controller_1.getAllPeakSeasonRates);
+router.get("/:id", peakSeasonRate_controller_1.getPeakSeasonRateById);
+router.put("/:id", peakSeasonRate_controller_1.updatePeakSeasonRate);
+router.delete("/:id", peakSeasonRate_controller_1.deletePeakSeasonRate);
+exports.default = router;
