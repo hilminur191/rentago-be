@@ -39,6 +39,7 @@ app.use("/api/peak-season-rates", peakSeasonRateRoutes);
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled Error:", err);
   res.status(500).json({ error: err.message || "Internal Server Error" });
+
 });
 
 // -------------------- START SERVER --------------------

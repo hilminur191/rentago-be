@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma";
-import { cloudinaryUpload } from "../utils/cloudinary";
+// import { cloudinaryUpload } from "../utils/cloudinary";
 import { ICreateUserParam, IUpdateUserParam } from "../interfaces/user.types";
 import { genSaltSync, hashSync } from "bcrypt";
 import jwt from "jsonwebtoken";
