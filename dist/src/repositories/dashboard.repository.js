@@ -14,37 +14,49 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUserDashboard = exports.getTenantDashboard = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
-// Ambil summary untuk Tenant Dashboard
 const getTenantDashboard = (tenantId) => __awaiter(void 0, void 0, void 0, function* () {
-    const properties = yield prisma_1.default.property.findMany({
-        where: { tenantId },
-        include: {
-            rooms: { select: { id: true } },
-            pictures: true,
-        },
-    });
-    const totalProperties = properties.length;
-    const totalRooms = properties.reduce((acc, p) => acc + p.rooms.length, 0);
-    return {
-        totalProperties,
-        totalRooms,
-        properties,
-    };
+    try {
+        // Ambil semua properti milik tenant
+        const properties = yield prisma_1.default.property.findMany({
+            where: { tenantId },
+            include: {
+                rooms: { select: { id: true } },
+                pictures: true,
+            },
+        });
+        const totalProperties = properties.length;
+        const totalRooms = properties.reduce((acc, property) => acc + property.rooms.length, 0);
+        return {
+            totalProperties,
+            totalRooms,
+            properties,
+        };
+    }
+    catch (error) {
+        console.error("[Dashboard Service - Tenant] Error:", error);
+        throw new Error("Gagal mengambil data dashboard tenant");
+    }
 });
 exports.getTenantDashboard = getTenantDashboard;
-// Ambil summary untuk User Dashboard
 const getUserDashboard = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const reservations = yield prisma_1.default.order.findMany({
-        where: { userId },
-        include: {
-            room: {
-                include: { property: true },
+    try {
+        const reservations = yield prisma_1.default.order.findMany({
+            where: { userId },
+            include: {
+                room: {
+                    include: { property: true },
+                },
             },
-        },
-    });
-    return {
-        totalReservations: reservations.length,
-        reservations,
-    };
+            orderBy: { createdAt: "desc" },
+        });
+        return {
+            totalReservations: reservations.length,
+            reservations,
+        };
+    }
+    catch (error) {
+        console.error("[Dashboard Service - User] Error:", error);
+        throw new Error("Gagal mengambil data dashboard user");
+    }
 });
 exports.getUserDashboard = getUserDashboard;

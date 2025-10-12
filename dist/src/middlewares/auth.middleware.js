@@ -8,46 +8,37 @@ exports.tenantGuard = tenantGuard;
 exports.userGuard = userGuard;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const SECRET_KEY = process.env.SECRET_KEY || "Rentago2025";
-// Middleware utama: token JWT
+// ✅ Middleware utama: verifikasi JWT
 function verifyToken(req, res, next) {
-    var _a;
     try {
-        const token = (_a = req.header("Authorization")) === null || _a === void 0 ? void 0 : _a.replace("Bearer ", "");
-        if (!token)
-            throw new Error("Unauthorized");
-        const verifyToken = jsonwebtoken_1.default.verify(token, SECRET_KEY);
-        if (!verifyToken)
-            throw new Error("Invalid token");
-        req.user = verifyToken;
+        const authHeader = req.header("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res
+                .status(401)
+                .json({ error: "Unauthorized: Token not provided" });
+        }
+        const token = authHeader.split(" ")[1];
+        const decoded = jsonwebtoken_1.default.verify(token, SECRET_KEY);
+        req.user = decoded;
         next();
     }
     catch (error) {
-        next(error);
+        return res.status(401).json({ error: "Unauthorized: Invalid token" });
     }
 }
-// Middleware khusus role: Tenant
+// ✅ Middleware khusus role: Tenant
 function tenantGuard(req, res, next) {
     var _a;
-    try {
-        if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== "TENANT") {
-            throw new Error("Forbidden: Tenant only");
-        }
-        next();
+    if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== "TENANT") {
+        return res.status(403).json({ error: "Forbidden: Tenant only" });
     }
-    catch (error) {
-        next(error);
-    }
+    next();
 }
-// Middleware khusus role: User
+// ✅ Middleware khusus role: User
 function userGuard(req, res, next) {
     var _a;
-    try {
-        if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== "USER") {
-            throw new Error("Forbidden: User only");
-        }
-        next();
+    if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== "USER") {
+        return res.status(403).json({ error: "Forbidden: User only" });
     }
-    catch (error) {
-        next(error);
-    }
+    next();
 }

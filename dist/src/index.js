@@ -15,10 +15,16 @@ const room_router_1 = __importDefault(require("./routers/room.router"));
 const dashboard_router_1 = __importDefault(require("./routers/dashboard.router"));
 const availability_router_1 = __importDefault(require("./routers/availability.router"));
 const peakSeasonRate_router_1 = __importDefault(require("./routers/peakSeasonRate.router"));
+const revenueStatistics_router_1 = __importDefault(require("./routers/revenueStatistics.router"));
 const app = (0, express_1.default)();
 const port = config_1.PORT || 8080;
 // -------------------- MIDDLEWARE --------------------
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+}));
 app.use((0, helmet_1.default)());
 app.use(express_1.default.json());
 // -------------------- HEALTH CHECK --------------------
@@ -34,6 +40,7 @@ app.use("/api/filter", property_router_1.default);
 app.use("/api/rooms", room_router_1.default);
 app.use("/api/availability", availability_router_1.default);
 app.use("/api/peak-season-rates", peakSeasonRate_router_1.default);
+app.use("/api/revenue", revenueStatistics_router_1.default);
 // -------------------- ERROR HANDLER --------------------
 app.use((err, _req, res, _next) => {
     console.error("Unhandled Error:", err);
