@@ -1,38 +1,51 @@
 import prisma from "../lib/prisma";
 
-// Ambil summary untuk Tenant Dashboard
 export const getTenantDashboard = async (tenantId: string) => {
-  const properties = await prisma.property.findMany({
-    where: { tenantId },
-    include: {
-      rooms: { select: { id: true } },
-      pictures: true,
-    },
-  });
+  try {
+    // Ambil semua properti milik tenant
+    const properties = await prisma.property.findMany({
+      where: { tenantId },
+      include: {
+        rooms: { select: { id: true } },
+        pictures: true,
+      },
+    });
 
-  const totalProperties = properties.length;
-  const totalRooms = properties.reduce((acc, p) => acc + p.rooms.length, 0);
+    const totalProperties = properties.length;
+    const totalRooms = properties.reduce(
+      (acc, property) => acc + property.rooms.length,
+      0
+    );
 
-  return {
-    totalProperties,
-    totalRooms,
-    properties,
-  };
+    return {
+      totalProperties,
+      totalRooms,
+      properties,
+    };
+  } catch (error) {
+    console.error("[Dashboard Service - Tenant] Error:", error);
+    throw new Error("Gagal mengambil data dashboard tenant");
+  }
 };
 
-// Ambil summary untuk User Dashboard
 export const getUserDashboard = async (userId: string) => {
-  const reservations = await prisma.order.findMany({
-    where: { userId },
-    include: {
-      room: {
-        include: { property: true },
+  try {
+    const reservations = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        room: {
+          include: { property: true },
+        },
       },
-    },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  return {
-    totalReservations: reservations.length,
-    reservations,
-  };
+    return {
+      totalReservations: reservations.length,
+      reservations,
+    };
+  } catch (error) {
+    console.error("[Dashboard Service - User] Error:", error);
+    throw new Error("Gagal mengambil data dashboard user");
+  }
 };

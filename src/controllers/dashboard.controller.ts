@@ -1,38 +1,40 @@
 import { Request, Response } from "express";
-import * as dashboardRepository from "../repositories/dashboard.repository";
+import {
+  getTenantDashboard,
+  getUserDashboard,
+} from "../repositories/dashboard.repository";
 
-// Tenant Dashboard
-export const getTenantDashboard = async (req: Request, res: Response) => {
+export const getTenantDashboardHandler = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const tenantId = req.user!.id;
-    const dashboard = await dashboardRepository.getTenantDashboard(tenantId);
+    const tenantId = (req as any).user?.id;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Tenant ID tidak ditemukan" });
+    }
 
-    res.status(200).json({
-      message: "Tenant dashboard fetched successfully",
-      data: dashboard,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch tenant dashboard",
-      error: (error as Error).message,
-    });
+    const data = await getTenantDashboard(tenantId);
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// User Dashboard
-export const getUserDashboard = async (req: Request, res: Response) => {
+export const getUserDashboardHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
-    const dashboard = await dashboardRepository.getUserDashboard(userId);
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User ID tidak ditemukan" });
+    }
 
-    res.status(200).json({
-      message: "User dashboard fetched successfully",
-      data: dashboard,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch user dashboard",
-      error: (error as Error).message,
-    });
+    const data = await getUserDashboard(userId);
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
