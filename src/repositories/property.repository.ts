@@ -9,11 +9,16 @@ import {
   buildPropertyFilters,
   paginate,
 } from "../helpers/property";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
-export async function createPropertyWithRooms(params: ICreatePropertyParam) {
+export async function createPropertyWithRooms(
+  params: ICreatePropertyParam,
+  files?: Express.Multer.File[]
+) {
   return prisma.$transaction(async (tx) => {
     let categoryId = params.categoryId;
 
+    // 🔹 Buat kategori baru jika belum ada
     if (!categoryId && params.categoryName) {
       const newCategory = await tx.propertyCategory.create({
         data: { name: params.categoryName },
@@ -25,6 +30,32 @@ export async function createPropertyWithRooms(params: ICreatePropertyParam) {
       throw new Error("CategoryId or categoryName must be provided");
     }
 
+    // 🔹 Upload ke Cloudinary jika ada file
+    const uploadedUrls: string[] =
+      files && files.length > 0
+        ? await Promise.all(
+            files.map(async (file) => {
+              try {
+                const url = await uploadToCloudinary(file.buffer);
+                return url;
+              } catch (err) {
+                console.error("❌ Gagal upload:", file.originalname, err);
+                throw new Error("Gagal mengunggah gambar ke Cloudinary");
+              }
+            })
+          )
+        : [];
+
+    // 🔹 Pastikan pictures selalu array
+    const picturesArray = Array.isArray(params.pictures)
+      ? params.pictures
+      : params.pictures
+      ? [params.pictures]
+      : [];
+
+    const allPictures = [...picturesArray, ...uploadedUrls];
+
+    // 🔹 Buat property
     const property = await tx.property.create({
       data: {
         tenantId: params.tenantId,
@@ -35,16 +66,18 @@ export async function createPropertyWithRooms(params: ICreatePropertyParam) {
         city: params.city,
         province: params.province,
         pictures: {
-          create: (params.pictures ?? []).map((url) => ({ url })),
+          create: allPictures.map((url) => ({ url })),
         },
         rooms: {
-          create: (params.rooms ?? []).map((room) => ({
-            name: room.name,
-            description: room.description ?? null,
-            basePrice: room.basePrice,
-            capacity: room.capacity,
-            quantity: room.quantity ?? 1,
-          })),
+          create: Array.isArray(params.rooms)
+            ? params.rooms.map((room) => ({
+                name: room.name,
+                description: room.description ?? null,
+                basePrice: Number(room.basePrice), 
+                capacity: Number(room.capacity), 
+                quantity: Number(room.quantity ?? 1),
+              }))
+            : [],
         },
       },
       include: {

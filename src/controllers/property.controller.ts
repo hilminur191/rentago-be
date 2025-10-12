@@ -5,46 +5,70 @@ import {
   getPropertyById,
   updateProperty,
   deleteProperty,
-  getFilteredProperties
+  getFilteredProperties,
 } from "../repositories/property.repository";
 import { ICreatePropertyParam } from "../interfaces/property.types";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary";
+
+function parseBodyField<T>(field: unknown): T | undefined {
+  if (typeof field === "string") {
+    try {
+      return JSON.parse(field) as T;
+    } catch {
+      return [field] as unknown as T;
+    }
+  }
+  return field as T;
+}
+
+function validatePropertyInput(
+  body: Partial<ICreatePropertyParam>
+): string | null {
+  if (!body.tenantId) return "tenantId is required";
+  if (!body.categoryId && !body.categoryName)
+    return "Either categoryId or categoryName is required";
+  if (!body.name) return "name is required";
+  if (!body.description) return "description is required";
+  if (!body.address) return "address is required";
+  if (!body.city) return "city is required";
+  if (!body.province) return "province is required";
+  return null;
+}
 
 export async function createProperty(req: Request, res: Response) {
   try {
-    const {
-      tenantId,
-      categoryId,
-      categoryName,
-      name,
-      description,
-      address,
-      city,
-      province,
-      pictures,
-      rooms,
-    } = req.body as ICreatePropertyParam;
+    let body = req.body as unknown as ICreatePropertyParam;
 
-    if (!tenantId) return res.status(400).json({ error: "tenantId is required" });
-    if (!categoryId && !categoryName) {
-      return res.status(400).json({ error: "Either categoryId or categoryName is required" });
-    }
-    if (!name) return res.status(400).json({ error: "name is required" });
-    if (!description) return res.status(400).json({ error: "description is required" });
-    if (!address) return res.status(400).json({ error: "address is required" });
-    if (!city) return res.status(400).json({ error: "city is required" });
-    if (!province) return res.status(400).json({ error: "province is required" });
+    // 🔍 Parse field yang mungkin dikirim dalam bentuk string JSON
+    const pictures = parseBodyField<string[]>(body.pictures) ?? [];
+    const rooms = parseBodyField<any[]>(body.rooms) ?? [];
 
+    // 🧾 Validasi input
+    const validationError = validatePropertyInput(body);
+    if (validationError)
+      return res.status(400).json({ error: validationError });
+
+    // ☁️ Upload file jika ada
+    const files = req.files as Express.Multer.File[] | undefined;
+    const uploadedUrls =
+      files && files.length > 0
+        ? await Promise.all(
+            files.map((file) => uploadToCloudinary(file.buffer))
+          )
+        : [];
+
+    // 🏗️ Simpan ke DB
     const newProperty = await createPropertyWithRooms({
-      tenantId,
-      ...(categoryId && { categoryId }),
-      ...(categoryName && { categoryName }),
-      name,
-      description,
-      address,
-      city,
-      province,
-      pictures: pictures ?? [],
-      rooms: rooms ?? [],
+      tenantId: body.tenantId,
+      ...(body.categoryId && { categoryId: body.categoryId }),
+      ...(body.categoryName && { categoryName: body.categoryName }),
+      name: body.name,
+      description: body.description,
+      address: body.address,
+      city: body.city,
+      province: body.province,
+      pictures: [...pictures, ...uploadedUrls],
+      rooms,
     });
 
     return res.status(201).json({
@@ -52,8 +76,10 @@ export async function createProperty(req: Request, res: Response) {
       data: newProperty,
     });
   } catch (error: any) {
-    console.error("Error creating property:", error);
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    console.error("❌ Error creating property:", error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
   }
 }
 
@@ -62,7 +88,9 @@ export async function getProperties(req: Request, res: Response) {
     const properties = await getAllProperties();
     return res.json({ data: properties });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
   }
 }
 
@@ -82,13 +110,10 @@ export async function getProperty(req: Request, res: Response) {
   }
 }
 
-
 export async function updatePropertyController(req: Request, res: Response) {
   try {
     const id = req.params.id;
-    if (!id) {
-      return res.status(400).json({ error: "Invalid property id" });
-    }
+    if (!id) return res.status(400).json({ error: "Invalid property id" });
 
     const updated = await updateProperty(id, req.body);
     return res.json({
@@ -96,46 +121,37 @@ export async function updatePropertyController(req: Request, res: Response) {
       data: updated,
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
   }
 }
 
 export async function deletePropertyController(req: Request, res: Response) {
   try {
     const id = req.params.id;
-    if (!id) {
-      return res.status(400).json({ error: "Invalid property id" });
-    }
+    if (!id) return res.status(400).json({ error: "Invalid property id" });
 
     await deleteProperty(id);
     return res.json({ message: "Property deleted successfully" });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
   }
 }
 
 export async function getAllFilteredProperties(req: Request, res: Response) {
   try {
-    const {
-      search,
-      city,
-      province,
-      categoryId,
-      minPrice,
-      maxPrice,
-      page,
-      limit,
-    } = req.query;
-
     const query = {
-      search: search ? String(search) : undefined,
-      city: city ? String(city) : undefined,
-      province: province ? String(province) : undefined,
-      categoryId: categoryId ? String(categoryId) : undefined,
-      page: page ? String(page) : "1",
-      limit: limit ? String(limit) : "9",
-      minPrice: minPrice ? String(minPrice) : undefined,
-      maxPrice: maxPrice ? String(maxPrice) : undefined,
+      search: req.query.search?.toString(),
+      city: req.query.city?.toString(),
+      province: req.query.province?.toString(),
+      categoryId: req.query.categoryId?.toString(),
+      page: req.query.page?.toString() ?? "1",
+      limit: req.query.limit?.toString() ?? "9",
+      minPrice: req.query.minPrice?.toString(),
+      maxPrice: req.query.maxPrice?.toString(),
     };
 
     const properties = await getFilteredProperties(query);
