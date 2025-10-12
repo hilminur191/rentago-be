@@ -11,12 +11,20 @@ import roomRouter from "./routers/room.router";
 import dashboardRouter from "./routers/dashboard.router";
 import roomAvailabilityRoutes from "./routers/availability.router";
 import peakSeasonRateRoutes from "./routers/peakSeasonRate.router";
+import revenueRouter from "./routers/revenueStatistics.router";
 
 const app = express();
 const port = PORT || 8080;
 
 // -------------------- MIDDLEWARE --------------------
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 app.use(helmet());
 app.use(express.json());
 
@@ -34,6 +42,7 @@ app.use("/api/filter", propertyRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/availability", roomAvailabilityRoutes);
 app.use("/api/peak-season-rates", peakSeasonRateRoutes);
+app.use("/api/revenue", revenueRouter);
 
 // -------------------- ERROR HANDLER --------------------
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

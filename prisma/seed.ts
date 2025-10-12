@@ -1,86 +1,89 @@
-// prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
 
-async function seedPeakSeasonRates() {
-  const rooms = await prisma.room.findMany();
+async function main() {
+  const propertyId = "8a9a77ae-7667-4bf3-a0ca-922c5b8e92df";
+  const userId = "a4bbac30-420f-43d3-966b-76be9646cfdb"; // Ganti dengan user yang sudah ada
+
+  // Ambil semua room milik properti ini
+  const rooms = await prisma.room.findMany({
+    where: { propertyId },
+  });
 
   if (rooms.length === 0) {
-    console.warn(
-      "⚠️ Tidak ada room di database. Buat minimal 1 room sebelum melakukan seed peak season rate."
-    );
+    console.error(`❌ Tidak ditemukan room untuk propertyId: ${propertyId}`);
     return;
   }
 
-  const roomsToSeed = rooms.slice(0, 3);
+  console.log(`✅ Ditemukan ${rooms.length} room. Membuat order...`);
 
-  // Contoh data peak season: Natal & Tahun Baru (pakai persentase), Liburan tengah tahun (pakai nominal)
-  const peakSeasonTemplates = [
-    {
-      startDate: new Date("2025-12-20"),
-      endDate: new Date("2026-01-05"),
-      adjustmentType: "PERCENTAGE" as const,
-      adjustmentValue: 20, // misal +20%
-    },
-    {
-      startDate: new Date("2026-07-01"),
-      endDate: new Date("2026-07-10"),
-      adjustmentType: "NOMINAL" as const,
-      adjustmentValue: 150000, // misal tambahan harga tetap
-    },
-  ];
+  // Pilih beberapa room secara acak atau pakai index tertentu
+  const room1 = rooms[0];
+  const room2 = rooms[1] || rooms[0];
 
-  for (const room of roomsToSeed) {
-    for (const season of peakSeasonTemplates) {
-      // Cek jika sudah ada season yang sama agar tidak duplikat
-      const existing = await prisma.peakSeasonRate.findFirst({
-        where: {
-          roomId: room.id,
-          startDate: season.startDate,
-          endDate: season.endDate,
+  // Buat beberapa order dengan payment CONFIRMED
+  await prisma.order.create({
+    data: {
+      userId,
+      roomId: room1.id,
+      startDate: new Date("2025-09-10"),
+      endDate: new Date("2025-09-12"),
+      totalPrice: 1500000,
+      status: "DIKONFIRMASI",
+      payment: {
+        create: {
+          paymentMethod: "TRANSFER",
+          proofUrl: "https://example.com/proof1.jpg",
+          status: "CONFIRMED",
         },
-      });
+      },
+    },
+  });
 
-      if (existing) {
-        console.log(
-          `ℹ️ Peak season rate untuk room ${room.id} (${season.startDate
-            .toISOString()
-            .slice(0, 10)}) sudah ada. Lewati.`
-        );
-        continue;
-      }
-
-      await prisma.peakSeasonRate.create({
-        data: {
-          roomId: room.id,
-          startDate: season.startDate,
-          endDate: season.endDate,
-          adjustmentType: season.adjustmentType,
-          adjustmentValue: season.adjustmentValue,
+  await prisma.order.create({
+    data: {
+      userId,
+      roomId: room2.id,
+      startDate: new Date("2025-09-22"),
+      endDate: new Date("2025-09-24"),
+      totalPrice: 2400000,
+      status: "DIKONFIRMASI",
+      payment: {
+        create: {
+          paymentMethod: "GATEWAY",
+          proofUrl: "https://example.com/proof2.jpg",
+          status: "CONFIRMED",
         },
-      });
+      },
+    },
+  });
 
-      console.log(
-        `✅ Peak season rate untuk room ${room.id} (${season.startDate
-          .toISOString()
-          .slice(0, 10)} - ${season.endDate
-          .toISOString()
-          .slice(0, 10)}) berhasil dibuat.`
-      );
-    }
-  }
-}
+  await prisma.order.create({
+    data: {
+      userId,
+      roomId: room1.id,
+      startDate: new Date("2025-10-01"),
+      endDate: new Date("2025-10-03"),
+      totalPrice: 1800000,
+      status: "DIKONFIRMASI",
+      payment: {
+        create: {
+          paymentMethod: "TRANSFER",
+          proofUrl: "https://example.com/proof3.jpg",
+          status: "CONFIRMED",
+        },
+      },
+    },
+  });
 
-async function main() {
-  console.log("🌱 Memulai proses seeding peak season rate...");
-  await seedPeakSeasonRates();
-  console.log("🌿 Seeding selesai!");
+  console.log(
+    `✅ Order + payment untuk properti ${propertyId} berhasil dibuat`
+  );
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Terjadi error saat seeding:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
