@@ -34,3 +34,52 @@ export const getRoomAvailabilityInRange = (
         price: item.room.basePrice,
       }))
     );
+
+    export const createRoomAvailability = async (
+      roomId: string,
+      date: string,
+      availability: number
+    ) => {
+      const targetDate = new Date(date);
+      if (isNaN(targetDate.getTime())) {
+        throw new Error("Tanggal tidak valid");
+      }
+
+      if (availability < 0) {
+        throw new Error("Jumlah availability tidak boleh negatif");
+      }
+
+      const room = await prisma.room.findUnique({
+        where: { id: roomId },
+        select: { id: true, quantity: true },
+      });
+
+      if (!room) {
+        throw new Error("Room tidak ditemukan");
+      }
+
+      if (room.quantity && availability > room.quantity) {
+        throw new Error(
+          `Availability tidak boleh lebih dari jumlah kamar (${room.quantity})`
+        );
+      }
+
+      const existing = await prisma.roomAvailability.findFirst({
+        where: { roomId, date: targetDate },
+      });
+
+      if (existing) {
+
+        throw new Error("Availability untuk tanggal ini sudah ada");
+      }
+
+      const newAvailability = await prisma.roomAvailability.create({
+        data: {
+          roomId,
+          date: targetDate,
+          availability,
+        },
+      });
+
+      return newAvailability;
+    };

@@ -1,12 +1,5 @@
-import { Request, Response } from "express";
-import {
-  createPropertyWithRooms,
-  getAllProperties,
-  getPropertyById,
-  updateProperty,
-  deleteProperty,
-  getFilteredProperties,
-} from "../repositories/property.repository";
+import { Request, Response, NextFunction } from "express";
+import * as propertyRepository from "../repositories/property.repository";
 import { ICreatePropertyParam } from "../interfaces/property.types";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary";
 
@@ -37,18 +30,16 @@ function validatePropertyInput(
 
 export async function createProperty(req: Request, res: Response) {
   try {
-    let body = req.body as unknown as ICreatePropertyParam;
+    const body = req.body as unknown as ICreatePropertyParam;
 
-    // 🔍 Parse field yang mungkin dikirim dalam bentuk string JSON
     const pictures = parseBodyField<string[]>(body.pictures) ?? [];
     const rooms = parseBodyField<any[]>(body.rooms) ?? [];
 
-    // 🧾 Validasi input
     const validationError = validatePropertyInput(body);
     if (validationError)
       return res.status(400).json({ error: validationError });
 
-    // ☁️ Upload file jika ada
+    // Upload file ke Cloudinary (jika ada)
     const files = req.files as Express.Multer.File[] | undefined;
     const uploadedUrls =
       files && files.length > 0
@@ -57,11 +48,11 @@ export async function createProperty(req: Request, res: Response) {
           )
         : [];
 
-    // 🏗️ Simpan ke DB
-    const newProperty = await createPropertyWithRooms({
+    // Simpan property + rooms ke DB
+    const newProperty = await propertyRepository.createPropertyWithRooms({
       tenantId: body.tenantId,
-      ...(body.categoryId && { categoryId: body.categoryId }),
-      ...(body.categoryName && { categoryName: body.categoryName }),
+      categoryId: body.categoryId,
+      categoryName: body.categoryName,
       name: body.name,
       description: body.description,
       address: body.address,
@@ -82,10 +73,9 @@ export async function createProperty(req: Request, res: Response) {
       .json({ error: error.message || "Internal server error" });
   }
 }
-
 export async function getProperties(req: Request, res: Response) {
   try {
-    const properties = await getAllProperties();
+    const properties = await propertyRepository.getAllProperties();
     return res.json({ data: properties });
   } catch (error: any) {
     return res
@@ -99,11 +89,12 @@ export async function getProperty(req: Request, res: Response) {
     const id = req.params.id;
     if (!id) return res.status(400).json({ error: "Invalid property id" });
 
-    const property = await getPropertyById(id);
-    if (!property) return res.status(404).json({ error: "Property not found" });
-
+    const property = await propertyRepository.getPropertyById(id);
     return res.json({ data: property });
   } catch (error: any) {
+    if (error.name === "NotFoundError") {
+      return res.status(404).json({ error: "Property not found" });
+    }
     return res
       .status(500)
       .json({ error: error.message || "Internal server error" });
@@ -115,7 +106,7 @@ export async function updatePropertyController(req: Request, res: Response) {
     const id = req.params.id;
     if (!id) return res.status(400).json({ error: "Invalid property id" });
 
-    const updated = await updateProperty(id, req.body);
+    const updated = await propertyRepository.updateProperty(id, req.body);
     return res.json({
       message: "Property updated successfully",
       data: updated,
@@ -132,7 +123,7 @@ export async function deletePropertyController(req: Request, res: Response) {
     const id = req.params.id;
     if (!id) return res.status(400).json({ error: "Invalid property id" });
 
-    await deleteProperty(id);
+    await propertyRepository.deleteProperty(id);
     return res.json({ message: "Property deleted successfully" });
   } catch (error: any) {
     return res
@@ -140,7 +131,6 @@ export async function deletePropertyController(req: Request, res: Response) {
       .json({ error: error.message || "Internal server error" });
   }
 }
-
 export async function getAllFilteredProperties(req: Request, res: Response) {
   try {
     const query = {
@@ -154,7 +144,7 @@ export async function getAllFilteredProperties(req: Request, res: Response) {
       maxPrice: req.query.maxPrice?.toString(),
     };
 
-    const properties = await getFilteredProperties(query);
+    const properties = await propertyRepository.getFilteredProperties(query);
 
     return res.json({
       message: "Filtered properties fetched successfully",
@@ -165,5 +155,23 @@ export async function getAllFilteredProperties(req: Request, res: Response) {
     return res
       .status(500)
       .json({ error: error.message || "Internal server error" });
+  }
+}
+
+export async function getMyProperties(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const tenantId = (req as any).user?.id;
+    if (!tenantId) {
+      return res.status(401).json({ error: "Unauthorized: tenant not found" });
+    }
+
+    const properties = await propertyRepository.getPropertiesByTenant(tenantId);
+    return res.json({ data: properties });
+  } catch (error) {
+    next(error);
   }
 }

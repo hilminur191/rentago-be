@@ -181,3 +181,17 @@ export async function getFilteredProperties(query: PropertyQuery) {
     totalPages: Math.ceil(total / pageSize),
   };
 }
+
+export async function getPropertiesByTenant(tenantId: string) {
+  return prisma.property.findMany({
+    where: { tenantId },
+    include: {
+      pictures: true,
+      rooms: {
+        include: {
+          availability: true,
+        },
+      },
+    },
+  });
+}
