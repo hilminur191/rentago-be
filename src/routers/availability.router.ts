@@ -4,5 +4,6 @@ import * as roomAvailabilityController from "../controllers/availability.control
 const router = Router();
 
 router.get("/:roomId", roomAvailabilityController.getAvailability);
+router.post("/:roomId", roomAvailabilityController.createAvailability);
 
 export default router;
